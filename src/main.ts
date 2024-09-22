@@ -1,5 +1,5 @@
 import * as DAT from 'dat.gui';
-import { vec3 } from 'gl-matrix';
+import { vec3, vec4 } from 'gl-matrix';
 import Camera from './Camera';
 import Cube from './geometry/Cube';
 import Icosphere from './geometry/Icosphere';
@@ -13,6 +13,7 @@ const Stats = require('stats-js');
 // This will be referred to by dat.GUI's functions that add GUI elements.
 const controls = {
   tesselations: 5,
+  shaderProgram: "fireball",
   'Load Scene': loadScene, // A function pointer, essentially
 };
 
@@ -41,7 +42,10 @@ function main() {
 
   // Add controls to the gui
   const gui = new DAT.GUI();
+  gui.width = 320;
+
   gui.add(controls, 'tesselations', 0, 8).step(1);
+  gui.add(controls, "shaderProgram", ["fireball", "lambert"]);
   gui.add(controls, 'Load Scene');
 
   // get canvas and webgl context
@@ -64,9 +68,15 @@ function main() {
   gl.enable(gl.DEPTH_TEST);
 
   const lambert = new ShaderProgram([
-    new Shader(gl.VERTEX_SHADER, require('./shaders/lambert.vert.glsl')),
-    new Shader(gl.FRAGMENT_SHADER, require('./shaders/lambert.frag.glsl')),
+    new Shader(gl.VERTEX_SHADER, require("./shaders/lambert.vert.glsl")),
+    new Shader(gl.FRAGMENT_SHADER, require("./shaders/lambert.frag.glsl")),
   ]);
+  const fireball = new ShaderProgram([
+    new Shader(gl.VERTEX_SHADER, require("./shaders/fireball.vert.glsl")),
+    new Shader(gl.FRAGMENT_SHADER, require("./shaders/fireball.frag.glsl")),
+  ]);
+
+  let time = 0;
 
   // This function will be called every frame
   function tick() {
@@ -74,18 +84,27 @@ function main() {
     stats.begin();
     gl.viewport(0, 0, window.innerWidth, window.innerHeight);
     renderer.clear();
+
     if(controls.tesselations != prevTesselations)
     {
       prevTesselations = controls.tesselations;
       icosphere = new Icosphere(vec3.fromValues(0, 0, 0), 1, prevTesselations);
       icosphere.create();
     }
-    renderer.render(camera, lambert, [
-      icosphere,
-      // square,
-      // cube
-    ]);
+
+    let shaderProgram = fireball;
+    if (controls.shaderProgram === "lambert") {
+      shaderProgram = lambert;
+      shaderProgram.setGeometryColor(vec4.fromValues(1, 0, 0, 1));
+    } else {
+      shaderProgram.setGeometryColor(vec4.fromValues(0, 1, 0, 1));
+      shaderProgram.setTime(time);
+    }
+
+    renderer.render(camera, shaderProgram, [icosphere]);
+
     stats.end();
+    time += 1;
 
     // Tell the browser to call `tick` again whenever it renders a new frame
     requestAnimationFrame(tick);
