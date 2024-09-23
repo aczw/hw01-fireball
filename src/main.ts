@@ -12,20 +12,32 @@ var CameraControls = require('3d-view-controls');
 // This will be referred to by dat.GUI's functions that add GUI elements.
 const controls = {
   tesselations: 5,
-  shaderProgram: "fireball",
   color1: [50, 50, 50],
   color2: [164, 44, 44],
-  'Reset scene': resetScene, // A function pointer, essentially
+  tailSpeed: 5,
+  fbmOctaves: 4,
+  "Hanako's Hakujoudai": hanako,
+  "Tsukasa's Kokujoudai": tsukasa,
+  'Camera position': resetCamera, // A function pointer, essentially
 };
 
 // Add controls to the gui
 const gui = new DAT.GUI();
-gui.width = 320;
+gui.width = 400;
 gui.add(controls, 'tesselations', 0, 8).step(1);
-const shaderCtrl = gui.add(controls, "shaderProgram", ["fireball", "lambert"]);
 const col1Ctrl = gui.addColor(controls, "color1");
 const col2Ctrl = gui.addColor(controls, "color2");
-gui.add(controls, 'Reset scene');
+const tailSpeedCtrl = gui.add(controls, "tailSpeed", 1, 10, 1);
+const octavesCtrl = gui.add(controls, "fbmOctaves", 1, 5, 1);
+
+const presets = gui.addFolder("Presets");
+presets.open();
+presets.add(controls, "Hanako's Hakujoudai");
+presets.add(controls, "Tsukasa's Kokujoudai");
+
+const reset = gui.addFolder("Reset");
+reset.open();
+reset.add(controls, 'Camera position');
 
 let icosphere: Icosphere;
 let prevTesselations: number = 5;
@@ -34,14 +46,25 @@ const initPosition = vec3.fromValues(3, 1, 8);
 const initTarget = vec3.fromValues(0, 1.4, 0);
 const camera = new Camera(initPosition, initTarget);
 
-function resetScene() {
-  shaderCtrl.setValue("fireball");
+function resetCamera() {
   camera.controls = CameraControls(document.getElementById('canvas'), {
     eye: initPosition,
     center: initTarget,
   });
+}
+
+function hanako() {
+  col1Ctrl.setValue([200, 200, 200]);
+  col2Ctrl.setValue([0, 114, 101]);
+  tailSpeedCtrl.setValue(2);
+  octavesCtrl.setValue(2);
+}
+
+function tsukasa() {
   col1Ctrl.setValue([50, 50, 50]);
   col2Ctrl.setValue([164, 44, 44]);
+  tailSpeedCtrl.setValue(5);
+  octavesCtrl.setValue(4);
 }
 
 function main() {
@@ -70,10 +93,6 @@ function main() {
   const renderer = new OpenGLRenderer(canvas);
   gl.enable(gl.DEPTH_TEST);
 
-  const lambert = new ShaderProgram([
-    new Shader(gl.VERTEX_SHADER, require("./shaders/lambert.vert.glsl")),
-    new Shader(gl.FRAGMENT_SHADER, require("./shaders/lambert.frag.glsl")),
-  ]);
   const fireball = new ShaderProgram([
     new Shader(gl.VERTEX_SHADER, require("./shaders/fireball.vert.glsl")),
     new Shader(gl.FRAGMENT_SHADER, require("./shaders/fireball.frag.glsl")),
@@ -99,23 +118,19 @@ function main() {
     }
 
     let shaderProgram = fireball;
-    if (controls.shaderProgram === "lambert") {
-      shaderProgram = lambert;
-      shaderProgram.setColor1(vec4.fromValues(1, 0, 0, 1));
-    } else {
-      shaderProgram.setTime(time);
+    shaderProgram.setTime(time);
 
-      const dir = vec3.create();
-      vec3.subtract(dir, camera.controls.eye, camera.controls.center);
-      vec3.normalize(dir, dir);
-      shaderProgram.setDirection(vec4.fromValues(dir["0"], dir["1"], dir["2"], 0));
+    const dir = vec3.create();
+    vec3.subtract(dir, camera.controls.eye, camera.controls.center);
+    vec3.normalize(dir, dir);
+    shaderProgram.setDirection(vec4.fromValues(dir["0"], dir["1"], dir["2"], 0));
 
-      const col1 = controls.color1;
-      shaderProgram.setColor1(vec4.fromValues(col1[0] / 255, col1[1] / 255, col1[2] / 255, 1));
+    const col1 = controls.color1;
+    shaderProgram.setColor1(vec4.fromValues(col1[0] / 255, col1[1] / 255, col1[2] / 255, 1));
 
-      const col2 = controls.color2;
-      shaderProgram.setColor2(vec4.fromValues(col2[0] / 255, col2[1] / 255, col2[2] / 255, 1));
-    }
+    shaderProgram.setColor2(vec4.fromValues(col2[0] / 255, col2[1] / 255, col2[2] / 255, 1));
+    shaderProgram.setTailSpeed(controls.tailSpeed);
+    shaderProgram.setFbmOctaves(controls.fbmOctaves);
 
     renderer.render(camera, shaderProgram, [icosphere]);
 

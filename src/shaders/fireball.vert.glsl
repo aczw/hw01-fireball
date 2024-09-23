@@ -19,6 +19,8 @@ uniform mat4 u_ViewProj;    // The matrix that defines the camera's transformati
                             // We've written a static matrix for you to use for HW2,
                             // but in HW3 you'll have to generate one yourself
 uniform highp int u_Time;
+uniform float u_TailSpeed;
+uniform int u_FbmOctaves;
 
 in vec4 vs_Pos;             // The array of vertex positions passed to the shader
 
@@ -61,10 +63,6 @@ float snoise(in vec3 v) {
     vec3 i1 = min( g.xyz, l.zxy );
     vec3 i2 = max( g.xyz, l.zxy );
 
-    //   x0 = x0 - 0.0 + 0.0 * C.xxx;
-    //   x1 = x0 - i1  + 1.0 * C.xxx;
-    //   x2 = x0 - i2  + 2.0 * C.xxx;
-    //   x3 = x0 - 1.0 + 3.0 * C.xxx;
     vec3 x1 = x0 - i1 + C.xxx;
     vec3 x2 = x0 - i2 + C.yyy; // 2.0*C.x = 1/3 = C.y
     vec3 x3 = x0 - D.yyy;      // -1.0+3.0*C.x = -0.5 = -D.y
@@ -124,7 +122,6 @@ float triangle_wave(float x, float freq, float amplitude) {
 }
 
 #define FBM_AMPLITUD_INITIAL mix(0.05, 0.1, triangle_wave(t, 1.0, 0.5));
-#define FBM_OCTAVES 4
 #define FBM_SCALE_SCALAR mix(2.5, 3.0, triangle_wave(t, 0.1, 0.5));
 #define FBM_AMPLITUD_SCALAR mix(0.8, 1.0, triangle_wave(t, 0.5, 3.5));
 
@@ -134,7 +131,7 @@ float fbm3(vec3 pos) {
     float amplitude = FBM_AMPLITUD_INITIAL;
 
     // Loop of octaves
-    for (int i = 0; i < FBM_OCTAVES; i++) {
+    for (int i = 0; i < u_FbmOctaves; i++) {
         value += amplitude * snoise(pos);
         pos *= FBM_SCALE_SCALAR;
         amplitude *= FBM_AMPLITUD_SCALAR;
@@ -178,8 +175,8 @@ void main()
     } else if (vertPos.y >= 2.0) {
         weight = 1.0;
     }
-    vertPos.x += weight * mix(0.3, 0.45, triangle_wave(t, 2.0, 2.0)) * sin((-vertPos.y + t) * 3.0);
-    vertPos.z += weight * mix(0.5, 0.6, triangle_wave(t, 0.75, 1.5)) * sin((-vertPos.y + 2.0 * t) * 2.0);
+    vertPos.x += weight * mix(0.3, 0.45, triangle_wave(t, 2.0, 2.0)) * sin((-vertPos.y + t * mix(0.2, 7.0, u_TailSpeed / 10.0)) * 3.0);
+    vertPos.z += weight * mix(0.5, 0.6, triangle_wave(t, 0.75, 1.5)) * sin((-vertPos.y + 2.0 * t * mix(0.3, 5.0, u_TailSpeed / 10.0)) * 2.0);
 
     vec4 modelposition = u_Model * vertPos;   // Temporarily store the transformed vertex positions for use below
 

@@ -32,6 +32,8 @@ class ShaderProgram {
   unifColor2: WebGLUniformLocation;
   unifTime: WebGLUniformLocation;
   unifDirection: WebGLUniformLocation;
+  unifTailSpeed: WebGLUniformLocation;
+  unifFbmOctaves: WebGLUniformLocation;
 
   constructor(shaders: Array<Shader>) {
     this.prog = gl.createProgram();
@@ -54,6 +56,8 @@ class ShaderProgram {
     this.unifColor2     = gl.getUniformLocation(this.prog, "u_Color2");
     this.unifTime       = gl.getUniformLocation(this.prog, "u_Time");
     this.unifDirection  = gl.getUniformLocation(this.prog, "u_Direction");
+    this.unifTailSpeed  = gl.getUniformLocation(this.prog, "u_TailSpeed");
+    this.unifFbmOctaves = gl.getUniformLocation(this.prog, "u_FbmOctaves");
   }
 
   use() {
@@ -109,6 +113,20 @@ class ShaderProgram {
     this.use();
     if (this.unifDirection !== -1) {
       gl.uniform4fv(this.unifDirection, direction);
+    }
+  }
+
+  setTailSpeed(speed: number) {
+    this.use();
+    if (this.unifTailSpeed !== -1) {
+      gl.uniform1f(this.unifTailSpeed, speed);
+    }
+  }
+
+  setFbmOctaves(octaves: number) {
+    this.use();
+    if (this.unifFbmOctaves !== -1) {
+      gl.uniform1i(this.unifFbmOctaves, octaves);
     }
   }
 
