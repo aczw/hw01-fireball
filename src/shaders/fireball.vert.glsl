@@ -173,8 +173,8 @@ void main()
     vertPos.y += 4.0 * falloff;
 
     float weight = 0.0;
-    if (vertPos.y >= 1.0 && vertPos.y < 2.0) {
-        weight = mix(0.0, 1.0, (vertPos.y - 1.0) / 2.0);
+    if (vertPos.y >= 1.0 && vertPos.y < 2.5) {
+        weight = mix(0.0, 1.0, (vertPos.y - 1.0) / 1.5);
     } else if (vertPos.y >= 2.0) {
         weight = 1.0;
     }

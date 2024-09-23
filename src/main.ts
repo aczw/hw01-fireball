@@ -1,34 +1,41 @@
 import * as DAT from 'dat.gui';
 import { vec3, vec4 } from 'gl-matrix';
 import Camera from './Camera';
-import Cube from './geometry/Cube';
 import Icosphere from './geometry/Icosphere';
-import Square from './geometry/Square';
 import { setGL } from './globals';
 import OpenGLRenderer from './rendering/gl/OpenGLRenderer';
 import ShaderProgram, { Shader } from './rendering/gl/ShaderProgram';
 const Stats = require('stats-js');
+var CameraControls = require('3d-view-controls');
 
 // Define an object with application parameters and button callbacks
 // This will be referred to by dat.GUI's functions that add GUI elements.
 const controls = {
   tesselations: 5,
   shaderProgram: "fireball",
-  'Load Scene': loadScene, // A function pointer, essentially
+  'Reset scene': resetScene, // A function pointer, essentially
 };
 
+// Add controls to the gui
+const gui = new DAT.GUI();
+gui.width = 320;
+gui.add(controls, 'tesselations', 0, 8).step(1);
+const shaderController = gui.add(controls, "shaderProgram", ["fireball", "lambert"]);
+gui.add(controls, 'Reset scene');
+
 let icosphere: Icosphere;
-let square: Square;
-let cube: Cube;
 let prevTesselations: number = 5;
 
-function loadScene() {
-  icosphere = new Icosphere(vec3.fromValues(0, 0, 0), 1, controls.tesselations);
-  icosphere.create();
-  square = new Square(vec3.fromValues(0, 0, 0));
-  square.create();
-  cube = new Cube();
-  cube.create();
+const initPosition = vec3.fromValues(3, 1, 8);
+const initTarget = vec3.fromValues(0, 1.4, 0);
+const camera = new Camera(initPosition, initTarget);
+
+function resetScene() {
+  shaderController.setValue("fireball");
+  camera.controls = CameraControls(document.getElementById('canvas'), {
+    eye: initPosition,
+    center: initTarget,
+  });
 }
 
 function main() {
@@ -40,14 +47,6 @@ function main() {
   stats.domElement.style.top = '0px';
   document.body.appendChild(stats.domElement);
 
-  // Add controls to the gui
-  const gui = new DAT.GUI();
-  gui.width = 320;
-
-  gui.add(controls, 'tesselations', 0, 8).step(1);
-  gui.add(controls, "shaderProgram", ["fireball", "lambert"]);
-  gui.add(controls, 'Load Scene');
-
   // get canvas and webgl context
   const canvas = <HTMLCanvasElement> document.getElementById('canvas');
   const gl = <WebGL2RenderingContext> canvas.getContext('webgl2');
@@ -58,10 +57,9 @@ function main() {
   // Later, we can import `gl` from `globals.ts` to access it
   setGL(gl);
 
-  // Initial call to load scene
-  loadScene();
-
-  const camera = new Camera(vec3.fromValues(3, 1, 8), vec3.fromValues(0, 1.4, 0));
+  // Load icosphere
+  icosphere = new Icosphere(vec3.fromValues(0, 0, 0), 1, controls.tesselations);
+  icosphere.create();
 
   const renderer = new OpenGLRenderer(canvas);
   renderer.setClearColor(0.2, 0.2, 0.2, 1);
