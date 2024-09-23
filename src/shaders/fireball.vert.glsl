@@ -126,9 +126,9 @@ float triangle_wave(float x, float freq, float amplitude) {
 #define FBM_AMPLITUD_INITIAL mix(0.05, 0.1, triangle_wave(t, 1.0, 0.5));
 #define FBM_OCTAVES 4
 #define FBM_SCALE_SCALAR mix(2.5, 3.0, triangle_wave(t, 0.1, 0.5));
-#define FBM_AMPLITUD_SCALAR 1.0
+#define FBM_AMPLITUD_SCALAR mix(0.8, 1.0, triangle_wave(t, 0.5, 3.5));
 
-float fbm3(in vec3 pos) {
+float fbm3(vec3 pos) {
     // Initial values
     float value = 0.5;
     float amplitude = FBM_AMPLITUD_INITIAL;
@@ -139,7 +139,12 @@ float fbm3(in vec3 pos) {
         pos *= FBM_SCALE_SCALAR;
         amplitude *= FBM_AMPLITUD_SCALAR;
     }
+
     return value;
+}
+
+float bias(float b, float val) {
+    return pow(val, log(b) / log(0.5));
 }
 
 void main()
@@ -162,6 +167,19 @@ void main()
 
     // High frequency, low amplitude (relatively, using FBM)
     vertPos += vs_Nor * fbm3(vs_Nor.xyz);
+
+    float falloff = clamp(dot(vs_Nor.xyz, vec3(0, 1, 0)), 0.0, 1.0);
+    falloff = bias(0.00001, falloff);
+    vertPos.y += 4.0 * falloff;
+
+    float weight = 0.0;
+    if (vertPos.y >= 1.0 && vertPos.y < 2.0) {
+        weight = mix(0.0, 1.0, (vertPos.y - 1.0) / 2.0);
+    } else if (vertPos.y >= 2.0) {
+        weight = 1.0;
+    }
+    vertPos.x += weight * mix(0.3, 0.45, triangle_wave(t, 2.0, 2.0)) * sin((-vertPos.y + t) * 3.0);
+    vertPos.z += weight * mix(0.5, 0.6, triangle_wave(t, 0.75, 1.5)) * sin((-vertPos.y + 2.0 * t) * 2.0);
 
     vec4 modelposition = u_Model * vertPos;   // Temporarily store the transformed vertex positions for use below
 
