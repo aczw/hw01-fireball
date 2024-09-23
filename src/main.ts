@@ -13,6 +13,8 @@ var CameraControls = require('3d-view-controls');
 const controls = {
   tesselations: 5,
   shaderProgram: "fireball",
+  color1: [50, 50, 50],
+  color2: [164, 44, 44],
   'Reset scene': resetScene, // A function pointer, essentially
 };
 
@@ -20,7 +22,9 @@ const controls = {
 const gui = new DAT.GUI();
 gui.width = 320;
 gui.add(controls, 'tesselations', 0, 8).step(1);
-const shaderController = gui.add(controls, "shaderProgram", ["fireball", "lambert"]);
+const shaderCtrl = gui.add(controls, "shaderProgram", ["fireball", "lambert"]);
+const col1Ctrl = gui.addColor(controls, "color1");
+const col2Ctrl = gui.addColor(controls, "color2");
 gui.add(controls, 'Reset scene');
 
 let icosphere: Icosphere;
@@ -31,11 +35,13 @@ const initTarget = vec3.fromValues(0, 1.4, 0);
 const camera = new Camera(initPosition, initTarget);
 
 function resetScene() {
-  shaderController.setValue("fireball");
+  shaderCtrl.setValue("fireball");
   camera.controls = CameraControls(document.getElementById('canvas'), {
     eye: initPosition,
     center: initTarget,
   });
+  col1Ctrl.setValue([50, 50, 50]);
+  col2Ctrl.setValue([164, 44, 44]);
 }
 
 function main() {
@@ -62,7 +68,6 @@ function main() {
   icosphere.create();
 
   const renderer = new OpenGLRenderer(canvas);
-  renderer.setClearColor(0.2, 0.2, 0.2, 1);
   gl.enable(gl.DEPTH_TEST);
 
   const lambert = new ShaderProgram([
@@ -81,6 +86,9 @@ function main() {
     camera.update();
     stats.begin();
     gl.viewport(0, 0, window.innerWidth, window.innerHeight);
+
+    const col2 = controls.color2;
+    renderer.setClearColor(col2[0] / 255 / 2, col2[1] / 255 / 2, col2[2] / 255 / 2, 1);
     renderer.clear();
 
     if(controls.tesselations != prevTesselations)
@@ -93,10 +101,20 @@ function main() {
     let shaderProgram = fireball;
     if (controls.shaderProgram === "lambert") {
       shaderProgram = lambert;
-      shaderProgram.setGeometryColor(vec4.fromValues(1, 0, 0, 1));
+      shaderProgram.setColor1(vec4.fromValues(1, 0, 0, 1));
     } else {
-      shaderProgram.setGeometryColor(vec4.fromValues(0, 1, 0, 1));
       shaderProgram.setTime(time);
+
+      const dir = vec3.create();
+      vec3.subtract(dir, camera.controls.eye, camera.controls.center);
+      vec3.normalize(dir, dir);
+      shaderProgram.setDirection(vec4.fromValues(dir["0"], dir["1"], dir["2"], 0));
+
+      const col1 = controls.color1;
+      shaderProgram.setColor1(vec4.fromValues(col1[0] / 255, col1[1] / 255, col1[2] / 255, 1));
+
+      const col2 = controls.color2;
+      shaderProgram.setColor2(vec4.fromValues(col2[0] / 255, col2[1] / 255, col2[2] / 255, 1));
     }
 
     renderer.render(camera, shaderProgram, [icosphere]);
